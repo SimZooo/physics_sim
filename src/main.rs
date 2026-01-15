@@ -1,16 +1,6 @@
-use macroquad::{
-    color::WHITE,
-    input::MouseButton,
-    text::{Font, load_ttf_font},
-};
-use physics_sim::{
-    app::{App, AppContext, WindowParameters},
-    renderer::entity::Entity,
-};
-use physics_sim::{
-    physics::entities::physics_body::PhysicsBody,
-    renderer::{component::Position, entity::EntityId},
-};
+use macroquad::{color::WHITE, input::MouseButton};
+use physics_sim::app::{App, AppContext, WindowParameters};
+use physics_sim::renderer::entity::EntityId;
 
 fn spawn_ball_onclick(app_context: &mut AppContext, dt: f32, state: &mut AppState) {
     if state.new_timer <= 0. {
@@ -20,32 +10,26 @@ fn spawn_ball_onclick(app_context: &mut AppContext, dt: f32, state: &mut AppStat
         state.new_timer -= dt;
         return;
     }
-    if AppContext::get_button_press(MouseButton::Left) {
+    if app_context.get_button_press(MouseButton::Left) {
         state.clicked = true;
-        let mouse_pos = AppContext::get_mouse_position();
-        let physics_body = PhysicsBody::new(mouse_pos, 10.);
-        let circle = Entity::new(10., WHITE, Some(physics_body));
-        app_context.entity_manager.add(circle);
+        let mouse_pos = app_context.get_mouse_position();
+        app_context.new_entity(mouse_pos, 10., WHITE);
     }
 }
 
 pub struct AppState {
     pub balls: Vec<EntityId>,
-    pub font: Font,
     pub new_timer: f32,
     pub clicked: bool,
 }
 
-#[macroquad::main("MyGame")]
+#[macroquad::main("Physics Simulator")]
 async fn main() {
-    let font = load_ttf_font("assets/DiodrumCyrillic-Regular.ttf")
-        .await
-        .expect("Failed to load font");
+    env_logger::init();
 
     let mut app = App::new(
         AppState {
             balls: vec![],
-            font,
             new_timer: 0.2,
             clicked: false,
         },

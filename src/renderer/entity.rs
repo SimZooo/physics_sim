@@ -1,6 +1,10 @@
 use std::{any, collections::HashMap};
 
-use macroquad::{color::Color, shapes::draw_circle};
+use macroquad::{
+    color::Color,
+    shapes::draw_circle,
+    window::{screen_height, screen_width},
+};
 
 use crate::physics::entities::physics_body::PhysicsBody;
 
@@ -19,11 +23,11 @@ impl Entity {
         }
     }
 
-    fn render(&self) {
+    fn render(&self, ppu: f32) {
         if let Some(physics_body) = &self.physics_body {
             draw_circle(
-                physics_body.position.x,
-                physics_body.position.y,
+                physics_body.position.x * ppu,
+                screen_height() - physics_body.position.y * ppu,
                 self.size,
                 self.color,
             );
@@ -59,8 +63,8 @@ impl EntityManager {
         entity_id
     }
 
-    pub fn render_all(&self) {
-        self.entities.iter().for_each(|(_, e)| e.render());
+    pub fn render_all(&self, ppu: f32) {
+        self.entities.iter().for_each(|(_, e)| e.render(ppu));
     }
 
     pub fn get_entity(&self, id: &EntityId) -> Option<&Entity> {
@@ -69,5 +73,9 @@ impl EntityManager {
 
     pub fn get_entity_mut(&mut self, id: &EntityId) -> Option<&mut Entity> {
         self.entities.get_mut(id)
+    }
+
+    pub fn clear(&mut self) {
+        self.entities = HashMap::new();
     }
 }

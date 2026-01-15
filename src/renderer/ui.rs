@@ -1,11 +1,12 @@
-use std::collections::HashMap;
+use egui_macroquad::egui::{self, Key, Pos2, Rect};
+use std::{collections::HashMap, sync::Arc};
 
 use macroquad::{
     color::WHITE,
     text::{Font, TextParams, draw_text, draw_text_ex},
 };
 
-use crate::math::math::Vec2f;
+use crate::{app::App, math::math::Vec2f};
 
 pub struct TextMetadata {
     pub text: String,
@@ -25,51 +26,87 @@ pub struct UiId(usize);
 
 pub struct UiManager {
     pub font: Option<Font>,
-    curr_id: usize,
     pub elements: HashMap<UiId, UiElement>,
 }
 
 impl UiManager {
-    pub fn init() -> Self {
-        Self {
-            font: None,
-            curr_id: 0,
-            elements: HashMap::new(),
-        }
-    }
+    pub fn render_ui<S>(app: &mut App<S>) {
+        egui_macroquad::ui(|ctx| {
+            let egui_rect = egui::SidePanel::new(egui::panel::Side::Left, "Scene")
+                .resizable(true)
+                .show(ctx, |ui| {
+                    // Set fonts
+                    let mut fonts = egui::FontDefinitions::default();
+                    fonts.font_data.insert(
+                        "diodrum".to_owned(),
+                        Arc::new(egui::FontData::from_static(include_bytes!(
+                            "../../assets/DiodrumCyrillic-Regular.ttf"
+                        ))),
+                    );
+                    fonts
+                        .families
+                        .entry(egui::FontFamily::Monospace)
+                        .or_default()
+                        .insert(0, "diodrum".to_owned());
+                    ctx.set_fonts(fonts);
 
-    pub fn add(&mut self, element: UiElement) -> UiId {
-        let ui_id = self.new_ui_id();
-        self.elements.insert(ui_id, element);
-        ui_id
-    }
+                    ui.horizontal(|ui| {
+                        ui.label(egui::RichText::new("Physics Simulation").size(20.));
+                        if ui
+                            .add(egui::ImageButton::new(egui_macroquad::egui::Image::new(
+                                egui::include_image!("../../assets/play-button.png"),
+                            )))
+                            .clicked()
+                        {
+                            app.paused = !app.paused;
+                        }
+                    });
+                    egui::ScrollArea::new([false, true]).show(ui, |ui| {
+                        egui::CollapsingHeader::new("Physics Entities").show(ui, |ui| {
+                            app.app_context
+                                .entity_manager
+                                .entities
+                                .iter()
+                                .enumerate()
+                                .for_each(|(i, (_, e))| {
+                                    egui::CollapsingHeader::new(format!("Entity {}", i)).show(
+                                        ui,
+                                        |ui| {
+                                            let physics_body = e
+                                                .physics_body
+                                                .as_ref()
+                                                .expect("Not a physics body");
+                                            let position = physics_body.position;
+                                            let velocity = physics_body.velocity;
+                                            let acceleration = physics_body.acceleration;
+                                            ui.label(format!(
+                                                "Position: {:.2}, {:.2}",
+                                                position.x, position.y
+                                            ));
+                                            ui.label(format!(
+                                                "Velocity: {:.2}, {:.2}",
+                                                velocity.x, velocity.y
+                                            ));
+                                            ui.label(format!(
+                                                "Acceleration: {:.2}, {:.2}",
+                                                acceleration.x, acceleration.y
+                                            ));
+                                        },
+                                    );
+                                });
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Physics Scale:");
+                            ui.add(egui::Slider::new(&mut app.app_context.ppu, 0.1..=1000.));
+                        });
+                    });
+                    app.app_context.ui_wants_keyboard = ctx.wants_keyboard_input();
+                    app.app_context.ui_wants_pointer = ctx.wants_pointer_input();
+                })
+                .response
+                .rect;
 
-    fn new_ui_id(&mut self) -> UiId {
-        let ui_id = UiId(self.curr_id);
-        self.curr_id += 1;
-        ui_id
-    }
-
-    pub fn render(&self) {
-        for el in self.elements.values() {
-            match &el.element_type {
-                UiElementType::Text(s) => match &self.font {
-                    Some(f) => {
-                        draw_text_ex(
-                            s.text.as_str(),
-                            s.position.x,
-                            s.position.y,
-                            TextParams {
-                                font: self.font.as_ref(),
-                                ..Default::default()
-                            },
-                        );
-                    }
-                    None => {
-                        draw_text(s.text.as_str(), s.position.x, s.position.y, 10., WHITE);
-                    }
-                },
-            }
-        }
+            app.app_context.side_panel_left_rect = egui_rect;
+        });
     }
 }

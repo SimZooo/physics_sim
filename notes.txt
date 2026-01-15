@@ -2,3 +2,5 @@ Abstract away AppContext so that entity_manager is private? Too much control
 Other way of string entities, because right now i have to downcast, not optimal
 Timer struct
 Shapes other than circle
+See Forces on entities
+Egui

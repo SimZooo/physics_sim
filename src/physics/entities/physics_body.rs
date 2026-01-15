@@ -1,3 +1,5 @@
+use macroquad::window::{screen_height, screen_width};
+
 use crate::math::math::{Vec2f, Vec2i};
 
 pub struct Force {
