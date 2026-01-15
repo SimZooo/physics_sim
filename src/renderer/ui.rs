@@ -51,7 +51,11 @@ impl UiManager {
                         }
                     });
                     egui::ScrollArea::new([false, true]).show(ui, |ui| {
-                        egui::CollapsingHeader::new("Physics Entities").show(ui, |ui| {
+                        egui::CollapsingHeader::new(format!(
+                            "Physics Entities {}",
+                            app.app_context.entity_manager.entities.len()
+                        ))
+                        .show(ui, |ui| {
                             app.app_context
                                 .entity_manager
                                 .entities

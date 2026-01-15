@@ -20,11 +20,7 @@ impl PhysicsEngine {
     }
 
     // Sort and sweep broad phase
-    pub fn broad(
-        &self,
-        entities: &HashMap<EntityId, Entity>,
-        ppu: f32,
-    ) -> Vec<(EntityId, EntityId)> {
+    fn broad(entities: &HashMap<EntityId, Entity>, ppu: f32) -> Vec<(EntityId, EntityId)> {
         let mut sorted = entities
             .iter()
             .map(|(id, e)| {
@@ -53,9 +49,32 @@ impl PhysicsEngine {
         potential_collisions
     }
 
+    fn narrow(
+        pairs: &Vec<(EntityId, EntityId)>,
+        entities: &HashMap<EntityId, Entity>,
+        ppu: f32,
+    ) -> Vec<(EntityId, EntityId)> {
+        pairs
+            .iter()
+            .filter(|(a, b)| {
+                let a = entities.get(&a).unwrap();
+                let b = entities.get(&b).unwrap();
+                a.bounding_box.intersects(&b.bounding_box, ppu)
+            })
+            .cloned()
+            .collect()
+    }
+
+    fn handle_collision(a: &EntityId, b: &EntityId, entities: &mut HashMap<EntityId, Entity>) {}
+
     pub fn update(&self, app_context: &mut AppContext) {
-        let collision_pairs = self.broad(&app_context.entity_manager.entities, app_context.ppu);
-        println!("{:?}", collision_pairs);
+        let possible_collision_pairs =
+            Self::broad(&app_context.entity_manager.entities, app_context.ppu);
+        let collision_pairs = Self::narrow(
+            &possible_collision_pairs,
+            &mut app_context.entity_manager.entities,
+            app_context.ppu,
+        );
 
         let dt = get_frame_time();
         for (_, entity) in &mut app_context.entity_manager.entities {
@@ -77,6 +96,9 @@ impl PhysicsEngine {
                 entity.physics_body.velocity = v;
             }
             entity.physics_body.acceleration = a;
+
+            entity.bounding_box.x = entity.physics_body.position.x;
+            entity.bounding_box.y = entity.physics_body.position.y;
         }
     }
 }
