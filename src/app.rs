@@ -8,9 +8,12 @@ use macroquad::{
 
 use crate::{
     math::math::Vec2f,
-    physics::{entities::physics_body::PhysicsBody, physics_engine::PhysicsEngine},
+    physics::{
+        entities::physics_body::{PhysicsBody, RigidBody},
+        physics_engine::PhysicsEngine,
+    },
     renderer::{
-        entity::{Entity, EntityManager},
+        entity::{Entity, EntityManager, Shape},
         ui::UiManager,
     },
 };
@@ -21,6 +24,7 @@ pub struct AppContext {
     pub ui_wants_keyboard: bool,
     pub ppu: f32,
     pub side_panel_left_rect: Rect,
+    pub debug_outlines: bool,
 }
 
 impl AppContext {
@@ -47,10 +51,18 @@ impl AppContext {
         }
     }
 
-    pub fn new_entity(&mut self, position: Vec2f, radius: f32, color: Color) {
-        let physics_body = PhysicsBody::new(position, radius);
-        let circle = Entity::new(10., color, Some(physics_body));
-        self.entity_manager.add(circle);
+    pub fn new_entity(
+        &mut self,
+        position: Vec2f,
+        mass: f32,
+        size: Vec2f,
+        color: Color,
+        shape: Shape,
+        rigidbody: RigidBody,
+    ) {
+        let physics_body = PhysicsBody::new(position, mass);
+        let ent = Entity::new(size, color, physics_body, shape, rigidbody);
+        self.entity_manager.add(ent);
     }
 }
 
@@ -81,6 +93,7 @@ impl<S> App<S> {
                     max: Pos2::new(0., 0.),
                 },
                 ppu: 100.,
+                debug_outlines: false,
             },
             physics_engine: PhysicsEngine::init(),
             systems: vec![],
@@ -103,14 +116,13 @@ impl<S> App<S> {
 
             UiManager::render_ui(self);
 
-            clear_background(RED);
+            clear_background(Color::from_hex(0x252526));
             if !self.paused {
-                self.physics_engine
-                    .update(&mut self.app_context.entity_manager);
+                self.physics_engine.update(&mut self.app_context);
             }
             self.app_context
                 .entity_manager
-                .render_all(self.app_context.ppu);
+                .render_all(self.app_context.ppu, self.app_context.debug_outlines);
 
             egui_macroquad::draw();
             next_frame().await;

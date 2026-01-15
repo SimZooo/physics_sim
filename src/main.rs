@@ -1,6 +1,8 @@
 use macroquad::{color::WHITE, input::MouseButton};
 use physics_sim::app::{App, AppContext, WindowParameters};
-use physics_sim::renderer::entity::EntityId;
+use physics_sim::math::math::Vec2f;
+use physics_sim::physics::entities::physics_body::RigidBody;
+use physics_sim::renderer::entity::{EntityId, Shape};
 
 fn spawn_ball_onclick(app_context: &mut AppContext, dt: f32, state: &mut AppState) {
     if state.new_timer <= 0. {
@@ -13,7 +15,14 @@ fn spawn_ball_onclick(app_context: &mut AppContext, dt: f32, state: &mut AppStat
     if app_context.get_button_press(MouseButton::Left) {
         state.clicked = true;
         let mouse_pos = app_context.get_mouse_position();
-        app_context.new_entity(mouse_pos, 10., WHITE);
+        app_context.new_entity(
+            mouse_pos,
+            10.,
+            Vec2f::new(10., 10.),
+            WHITE,
+            Shape::Circle,
+            RigidBody::Dynamic,
+        );
     }
 }
 
@@ -38,6 +47,17 @@ async fn main() {
             height: 1080,
         },
     );
+
+    /*
+    app.app_context.new_entity(
+        Vec2f::new(0., 10. / app.app_context.ppu),
+        1000.,
+        Vec2f::new(1920., 10.),
+        WHITE,
+        Shape::Rectangle,
+        RigidBody::Static,
+    );
+    */
 
     app.add_system_function(spawn_ball_onclick);
     app.run().await;

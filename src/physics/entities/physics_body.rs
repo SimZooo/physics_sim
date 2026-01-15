@@ -2,6 +2,25 @@ use macroquad::window::{screen_height, screen_width};
 
 use crate::math::math::{Vec2f, Vec2i};
 
+#[derive(PartialEq, Eq)]
+pub enum RigidBody {
+    Dynamic,
+    Static,
+}
+
+pub struct BoundingBox {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+impl BoundingBox {
+    pub fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
+        Self { x, y, w, h }
+    }
+}
+
 pub struct Force {
     pub direction: Vec2i,
     pub magnitude: f32,

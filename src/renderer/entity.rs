@@ -1,36 +1,93 @@
 use std::{any, collections::HashMap};
 
 use macroquad::{
-    color::Color,
-    shapes::draw_circle,
+    color::{Color, GREEN},
+    shapes::{draw_circle, draw_rectangle, draw_rectangle_lines},
     window::{screen_height, screen_width},
 };
 
-use crate::physics::entities::physics_body::PhysicsBody;
+use crate::{
+    math::math::Vec2f,
+    physics::entities::physics_body::{BoundingBox, PhysicsBody, RigidBody},
+};
+
+pub enum Shape {
+    Circle,
+    Rectangle,
+}
 
 pub struct Entity {
-    pub size: f32,
+    pub size: Vec2f,
     pub color: Color,
-    pub physics_body: Option<PhysicsBody>,
+    pub physics_body: PhysicsBody,
+    pub bounding_box: BoundingBox,
+    pub rigidbody: RigidBody,
+    pub shape: Shape,
 }
 
 impl Entity {
-    pub fn new(size: f32, color: Color, physics_body: Option<PhysicsBody>) -> Self {
+    pub fn new(
+        size: Vec2f,
+        color: Color,
+        physics_body: PhysicsBody,
+        shape: Shape,
+        rigidbody: RigidBody,
+    ) -> Self {
+        println!("{:?}", physics_body.position);
         Self {
             size,
             color,
+            bounding_box: BoundingBox::new(
+                physics_body.position.x.clone(),
+                physics_body.position.y.clone(),
+                size.x * 2.,
+                size.y * 2.,
+            ),
             physics_body,
+            rigidbody,
+            shape,
         }
     }
 
-    fn render(&self, ppu: f32) {
-        if let Some(physics_body) = &self.physics_body {
-            draw_circle(
-                physics_body.position.x * ppu,
-                screen_height() - physics_body.position.y * ppu,
-                self.size,
-                self.color,
-            );
+    fn render(&self, ppu: f32, debug: bool) {
+        match self.shape {
+            Shape::Circle => {
+                draw_circle(
+                    self.physics_body.position.x * ppu,
+                    screen_height() - self.physics_body.position.y * ppu,
+                    self.size.x,
+                    self.color,
+                );
+                if debug {
+                    draw_rectangle_lines(
+                        self.physics_body.position.x * ppu - self.size.x,
+                        screen_height() - self.physics_body.position.y * ppu - self.size.y,
+                        self.size.x * 2.,
+                        self.size.y * 2.,
+                        2.,
+                        GREEN,
+                    );
+                }
+            }
+            Shape::Rectangle => {
+                draw_rectangle(
+                    self.physics_body.position.x,
+                    screen_height() - self.physics_body.position.y * ppu,
+                    self.size.x,
+                    self.size.y,
+                    self.color,
+                );
+                if debug {
+                    draw_rectangle_lines(
+                        self.physics_body.position.x * ppu,
+                        screen_height() - self.physics_body.position.y * ppu,
+                        self.size.x,
+                        self.size.y,
+                        2.,
+                        GREEN,
+                    );
+                }
+            }
         }
     }
 }
@@ -63,8 +120,8 @@ impl EntityManager {
         entity_id
     }
 
-    pub fn render_all(&self, ppu: f32) {
-        self.entities.iter().for_each(|(_, e)| e.render(ppu));
+    pub fn render_all(&self, ppu: f32, debug: bool) {
+        self.entities.iter().for_each(|(_, e)| e.render(ppu, debug));
     }
 
     pub fn get_entity(&self, id: &EntityId) -> Option<&Entity> {

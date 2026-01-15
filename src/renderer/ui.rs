@@ -1,11 +1,6 @@
 use egui_macroquad::egui::{self, Key, Pos2, Rect};
 use std::{collections::HashMap, sync::Arc};
 
-use macroquad::{
-    color::WHITE,
-    text::{Font, TextParams, draw_text, draw_text_ex},
-};
-
 use crate::{app::App, math::math::Vec2f};
 
 pub struct TextMetadata {
@@ -21,13 +16,7 @@ pub struct UiElement {
     pub element_type: UiElementType,
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
-pub struct UiId(usize);
-
-pub struct UiManager {
-    pub font: Option<Font>,
-    pub elements: HashMap<UiId, UiElement>,
-}
+pub struct UiManager {}
 
 impl UiManager {
     pub fn render_ui<S>(app: &mut App<S>) {
@@ -72,10 +61,7 @@ impl UiManager {
                                     egui::CollapsingHeader::new(format!("Entity {}", i)).show(
                                         ui,
                                         |ui| {
-                                            let physics_body = e
-                                                .physics_body
-                                                .as_ref()
-                                                .expect("Not a physics body");
+                                            let physics_body = &e.physics_body;
                                             let position = physics_body.position;
                                             let velocity = physics_body.velocity;
                                             let acceleration = physics_body.acceleration;
@@ -96,9 +82,10 @@ impl UiManager {
                                 });
                         });
                         ui.horizontal(|ui| {
-                            ui.label("Physics Scale:");
+                            ui.label("Pixels Per Unit:");
                             ui.add(egui::Slider::new(&mut app.app_context.ppu, 0.1..=1000.));
                         });
+                        ui.checkbox(&mut app.app_context.debug_outlines, "Debug Outlines");
                     });
                     app.app_context.ui_wants_keyboard = ctx.wants_keyboard_input();
                     app.app_context.ui_wants_pointer = ctx.wants_pointer_input();

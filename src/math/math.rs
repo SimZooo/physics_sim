@@ -62,6 +62,15 @@ impl std::ops::Neg for Vec2f {
     }
 }
 
+impl From<(f32, f32)> for Vec2f {
+    fn from(value: (f32, f32)) -> Self {
+        Self {
+            x: value.0,
+            y: value.1,
+        }
+    }
+}
+
 pub struct Vec2i {
     pub x: i32,
     pub y: i32,
