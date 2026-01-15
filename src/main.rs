@@ -1,42 +1,60 @@
-use macroquad::text::load_ttf_font;
+use macroquad::{
+    color::WHITE,
+    input::MouseButton,
+    text::{Font, load_ttf_font},
+};
 use physics_sim::{
-    app::{App, AppContext},
-    component::Position,
-    entities::text_entity::TextEntity,
-    entity::EntityId,
+    app::{App, AppContext, WindowParameters},
+    renderer::entity::Entity,
+};
+use physics_sim::{
+    physics::entities::physics_body::PhysicsBody,
+    renderer::{component::Position, entity::EntityId},
 };
 
-fn update_text(app: &mut AppContext, dt: f32, state: &mut AppState) {
-    let mut text_entity = app
-        .entity_manager
-        .get_entity_mut(&state.text_id)
-        .expect("Failed to get text_entity")
-        .as_any()
-        .downcast_mut::<TextEntity>()
-        .expect("Not a TextEntity");
-
-    text_entity.position.x += dt * 100.;
-    text_entity.position.y += dt * 100.;
+fn spawn_ball_onclick(app_context: &mut AppContext, dt: f32, state: &mut AppState) {
+    if state.new_timer <= 0. {
+        state.clicked = false;
+        state.new_timer = 0.2
+    } else if state.clicked {
+        state.new_timer -= dt;
+        return;
+    }
+    if AppContext::get_button_press(MouseButton::Left) {
+        state.clicked = true;
+        let mouse_pos = AppContext::get_mouse_position();
+        let physics_body = PhysicsBody::new(mouse_pos, 10.);
+        let circle = Entity::new(10., WHITE, Some(physics_body));
+        app_context.entity_manager.add(circle);
+    }
 }
 
 pub struct AppState {
-    pub text_id: EntityId,
+    pub balls: Vec<EntityId>,
+    pub font: Font,
+    pub new_timer: f32,
+    pub clicked: bool,
 }
 
 #[macroquad::main("MyGame")]
 async fn main() {
-    let mut app = App::new(AppState {
-        text_id: EntityId(0),
-    });
-
     let font = load_ttf_font("assets/DiodrumCyrillic-Regular.ttf")
         .await
         .expect("Failed to load font");
-    let text_entity = TextEntity::new("Hello, World!", Position { x: 400., y: 400. }, Some(font));
-    let text_id = app.app_context.entity_manager.add(Box::new(text_entity));
-    app.state.text_id = text_id;
 
-    app.add_system_function(update_text);
+    let mut app = App::new(
+        AppState {
+            balls: vec![],
+            font,
+            new_timer: 0.2,
+            clicked: false,
+        },
+        WindowParameters {
+            width: 1920,
+            height: 1080,
+        },
+    );
 
+    app.add_system_function(spawn_ball_onclick);
     app.run().await;
 }
