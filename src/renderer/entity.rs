@@ -1,8 +1,9 @@
 use std::{any, collections::HashMap};
 
 use macroquad::{
-    color::{Color, GREEN},
-    shapes::{draw_circle, draw_rectangle, draw_rectangle_lines},
+    color::{Color, GREEN, PURPLE, RED},
+    miniquad::gl::GL_RENDERBUFFER,
+    shapes::{draw_circle, draw_line, draw_rectangle, draw_rectangle_lines},
     window::{screen_height, screen_width},
 };
 
@@ -11,6 +12,7 @@ use crate::{
     physics::entities::physics_body::{BoundingBox, PhysicsBody, RigidBody},
 };
 
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Shape {
     Circle,
     Rectangle,
@@ -33,37 +35,60 @@ impl Entity {
         shape: Shape,
         rigidbody: RigidBody,
     ) -> Self {
-        println!("{:?}", physics_body.position);
+        let bb = match shape {
+            Shape::Circle => {
+                // Circle is rendered at center position
+                BoundingBox::new(
+                    physics_body.position.x.clone(),
+                    physics_body.position.y.clone(),
+                    size.x * 2.,
+                    size.y * 2.,
+                )
+            }
+            Shape::Rectangle => {
+                // Rectangle is rendered with center offset, so bounding box center is at position
+                BoundingBox::new(
+                    physics_body.position.x.clone(),
+                    physics_body.position.y.clone(),
+                    size.x,
+                    size.y,
+                )
+            }
+        };
         Self {
             size,
             color,
-            bounding_box: BoundingBox::new(
-                physics_body.position.x.clone(),
-                physics_body.position.y.clone(),
-                size.x * 2.,
-                size.y * 2.,
-            ),
             physics_body,
+            bounding_box: bb,
             rigidbody,
             shape,
         }
     }
 
-    fn render(&self, ppu: f32, debug: bool) {
+    fn render(&self, physics_dimensions: Vec2f, debug: bool, forces: bool, com: bool) {
+        let mut pixel_coords = self.physics_body.position;
+        pixel_coords.x = pixel_coords.x / physics_dimensions.x * screen_width();
+        pixel_coords.y =
+            screen_height() - (pixel_coords.y / physics_dimensions.y * screen_height());
+
+        let pixel_size = Vec2f::new(
+            self.size.x * (screen_width() / physics_dimensions.x),
+            self.size.y * (screen_height() / physics_dimensions.y),
+        );
+
+        let bb_size = Vec2f::new(
+            self.bounding_box.w * (screen_width() / physics_dimensions.x),
+            self.bounding_box.h * (screen_height() / physics_dimensions.y),
+        );
         match self.shape {
             Shape::Circle => {
-                draw_circle(
-                    self.physics_body.position.x * ppu,
-                    screen_height() - self.physics_body.position.y * ppu,
-                    self.size.x,
-                    self.color,
-                );
+                draw_circle(pixel_coords.x, pixel_coords.y, pixel_size.x, self.color);
                 if debug {
                     draw_rectangle_lines(
-                        self.physics_body.position.x * ppu - self.size.x,
-                        screen_height() - self.physics_body.position.y * ppu - self.size.y,
-                        self.size.x * 2.,
-                        self.size.y * 2.,
+                        pixel_coords.x - pixel_size.x,
+                        pixel_coords.y - pixel_size.y,
+                        bb_size.x,
+                        bb_size.y,
                         2.,
                         GREEN,
                     );
@@ -71,23 +96,38 @@ impl Entity {
             }
             Shape::Rectangle => {
                 draw_rectangle(
-                    self.physics_body.position.x,
-                    screen_height() - self.physics_body.position.y * ppu,
-                    self.size.x,
-                    self.size.y,
+                    pixel_coords.x - pixel_size.x / 2.,
+                    pixel_coords.y - pixel_size.y / 2.,
+                    pixel_size.x,
+                    pixel_size.y,
                     self.color,
                 );
                 if debug {
                     draw_rectangle_lines(
-                        self.physics_body.position.x * ppu,
-                        screen_height() - self.physics_body.position.y * ppu,
-                        self.size.x,
-                        self.size.y,
+                        pixel_coords.x - pixel_size.x / 2.,
+                        pixel_coords.y - pixel_size.y / 2.,
+                        bb_size.x,
+                        bb_size.y,
                         2.,
                         GREEN,
                     );
                 }
             }
+        }
+
+        if com {
+            draw_circle(pixel_coords.x, pixel_coords.y, 5., PURPLE);
+        }
+
+        if forces {
+            draw_line(
+                pixel_coords.x,
+                pixel_coords.y,
+                pixel_coords.x - self.physics_body.velocity.x * 10.,
+                pixel_coords.y - self.physics_body.velocity.y * 10.,
+                2.,
+                RED,
+            );
         }
     }
 }
@@ -120,8 +160,10 @@ impl EntityManager {
         entity_id
     }
 
-    pub fn render_all(&self, ppu: f32, debug: bool) {
-        self.entities.iter().for_each(|(_, e)| e.render(ppu, debug));
+    pub fn render_all(&self, physics_dimensions: Vec2f, debug: bool, forces: bool, com: bool) {
+        self.entities
+            .iter()
+            .for_each(|(_, e)| e.render(physics_dimensions, debug, forces, com));
     }
 
     pub fn get_entity(&self, id: &EntityId) -> Option<&Entity> {

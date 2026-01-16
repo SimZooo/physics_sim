@@ -1,9 +1,9 @@
 use egui_macroquad::egui::{Pos2, Rect};
 use macroquad::{
     color::{Color, RED},
-    input::{MouseButton, is_mouse_button_down, mouse_position},
+    input::{MouseButton, is_mouse_button_down, mouse_position, mouse_position_local},
     miniquad::window::{screen_size, set_window_size},
-    window::{clear_background, next_frame, screen_height},
+    window::{clear_background, next_frame, screen_height, screen_width},
 };
 
 use crate::{
@@ -25,6 +25,10 @@ pub struct AppContext {
     pub ppu: f32,
     pub side_panel_left_rect: Rect,
     pub debug_outlines: bool,
+    pub show_forces: bool,
+    pub show_com: bool,
+    pub physics_dimensions: Vec2f,
+    pub current_shape: Shape,
 }
 
 impl AppContext {
@@ -44,10 +48,11 @@ impl AppContext {
     }
 
     pub fn get_mouse_position(&self) -> Vec2f {
-        let pos = mouse_position();
+        let (mx, my) = mouse_position();
+
         Vec2f {
-            x: pos.0 / self.ppu,
-            y: (screen_height() - pos.1) / self.ppu,
+            x: mx / screen_width() * self.physics_dimensions.x,
+            y: (screen_height() - my) / screen_height() * self.physics_dimensions.y,
         }
     }
 
@@ -57,10 +62,29 @@ impl AppContext {
         mass: f32,
         size: Vec2f,
         color: Color,
+        rigidbody: RigidBody,
+    ) {
+        let physics_body = PhysicsBody::new(position, mass, 0.3);
+        let ent = Entity::new(
+            size,
+            color,
+            physics_body,
+            self.current_shape.clone(),
+            rigidbody,
+        );
+        self.entity_manager.add(ent);
+    }
+
+    pub fn new_entity_shaped(
+        &mut self,
+        position: Vec2f,
+        mass: f32,
+        size: Vec2f,
+        color: Color,
         shape: Shape,
         rigidbody: RigidBody,
     ) {
-        let physics_body = PhysicsBody::new(position, mass);
+        let physics_body = PhysicsBody::new(position, mass, 0.3);
         let ent = Entity::new(size, color, physics_body, shape, rigidbody);
         self.entity_manager.add(ent);
     }
@@ -80,7 +104,7 @@ pub struct App<S> {
 }
 
 impl<S> App<S> {
-    pub fn new(state: S, window_params: WindowParameters) -> Self {
+    pub fn new(state: S, window_params: WindowParameters, physics_dimensions: Vec2f) -> Self {
         set_window_size(window_params.width, window_params.height);
 
         Self {
@@ -94,6 +118,10 @@ impl<S> App<S> {
                 },
                 ppu: 100.,
                 debug_outlines: false,
+                physics_dimensions,
+                current_shape: Shape::Circle,
+                show_forces: false,
+                show_com: false,
             },
             physics_engine: PhysicsEngine::init(),
             systems: vec![],
@@ -120,9 +148,12 @@ impl<S> App<S> {
             if !self.paused {
                 self.physics_engine.update(&mut self.app_context);
             }
-            self.app_context
-                .entity_manager
-                .render_all(self.app_context.ppu, self.app_context.debug_outlines);
+            self.app_context.entity_manager.render_all(
+                self.app_context.physics_dimensions,
+                self.app_context.debug_outlines,
+                self.app_context.show_forces,
+                self.app_context.show_com,
+            );
 
             egui_macroquad::draw();
             next_frame().await;

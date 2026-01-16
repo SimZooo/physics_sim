@@ -17,10 +17,9 @@ fn spawn_ball_onclick(app_context: &mut AppContext, dt: f32, state: &mut AppStat
         let mouse_pos = app_context.get_mouse_position();
         app_context.new_entity(
             mouse_pos,
-            10.,
-            Vec2f::new(10., 10.),
+            0.2,
+            Vec2f::new(0.2, 0.2),
             WHITE,
-            Shape::Circle,
             RigidBody::Dynamic,
         );
     }
@@ -46,18 +45,18 @@ async fn main() {
             width: 1920,
             height: 1080,
         },
+        Vec2f::new(15., 10.),
     );
 
-    /*
-    app.app_context.new_entity(
-        Vec2f::new(0., 10. / app.app_context.ppu),
-        1000.,
-        Vec2f::new(1920., 10.),
+    // Base plate
+    app.app_context.new_entity_shaped(
+        Vec2f::new(7.5, 0.5),
+        0.,
+        Vec2f::new(15., 1.),
         WHITE,
         Shape::Rectangle,
         RigidBody::Static,
     );
-    */
 
     app.add_system_function(spawn_ball_onclick);
     app.run().await;

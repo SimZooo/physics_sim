@@ -1,7 +1,8 @@
 use egui_macroquad::egui::{self, Key, Pos2, Rect};
+use macroquad::input::mouse_position;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{app::App, math::math::Vec2f};
+use crate::{app::App, math::math::Vec2f, renderer::entity::Shape};
 
 pub struct TextMetadata {
     pub text: String,
@@ -85,11 +86,36 @@ impl UiManager {
                                     );
                                 });
                         });
-                        ui.horizontal(|ui| {
-                            ui.label("Pixels Per Unit:");
-                            ui.add(egui::Slider::new(&mut app.app_context.ppu, 0.1..=1000.));
-                        });
                         ui.checkbox(&mut app.app_context.debug_outlines, "Debug Outlines");
+                        ui.checkbox(&mut app.app_context.show_forces, "Forces");
+                        ui.checkbox(&mut app.app_context.show_com, "Center of Mass");
+                        ui.horizontal(|ui| {
+                            ui.label("Current shape:");
+                            if ui
+                                .add(egui::RadioButton::new(
+                                    app.app_context.current_shape == Shape::Circle,
+                                    "Circle",
+                                ))
+                                .clicked()
+                            {
+                                app.app_context.current_shape = Shape::Circle;
+                            };
+                            if ui
+                                .add(egui::RadioButton::new(
+                                    app.app_context.current_shape == Shape::Rectangle,
+                                    "Rectangle",
+                                ))
+                                .clicked()
+                            {
+                                app.app_context.current_shape = Shape::Rectangle;
+                            };
+                        });
+                        let mouse_pos_sim = app.app_context.get_mouse_position();
+                        let mouse_pos_real = mouse_position();
+                        ui.label(format!(
+                            "Mouse Position: {:.2}, {:.2}. Pixels: {:.2} {:.2}",
+                            mouse_pos_sim.x, mouse_pos_sim.y, mouse_pos_real.0, mouse_pos_real.1
+                        ));
                     });
                     app.app_context.ui_wants_keyboard = ctx.wants_keyboard_input();
                     app.app_context.ui_wants_pointer = ctx.wants_pointer_input();
